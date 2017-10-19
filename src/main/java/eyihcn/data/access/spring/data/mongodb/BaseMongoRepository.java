@@ -7,10 +7,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.repository.NoRepositoryBean;
 import org.springframework.lang.Nullable;
 
 import eyihcn.base.entity.BaseEntity;
 
+@NoRepositoryBean
 public interface BaseMongoRepository<T extends BaseEntity<PK>, PK extends Serializable> extends MongoRepository<T, PK> {
 
 	Page<T> QueryForPage(Criteria criteria, @Nullable Pageable pageable);
@@ -38,4 +40,5 @@ public interface BaseMongoRepository<T extends BaseEntity<PK>, PK extends Serial
 	boolean delete(Criteria criteria, @Nullable Sort sort);
 
 	boolean delete(Criteria criteria);
+
 }

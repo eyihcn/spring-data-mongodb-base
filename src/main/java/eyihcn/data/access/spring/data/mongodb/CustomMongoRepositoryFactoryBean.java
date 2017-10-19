@@ -15,7 +15,6 @@ import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
 
 import eyihcn.base.entity.BaseEntity;
-import eyihcn.base.spring.data.mongo.repository.BaseMongoRepositoryImpl;
 
 /**
  * 用于生成自扩展的Repository方法
