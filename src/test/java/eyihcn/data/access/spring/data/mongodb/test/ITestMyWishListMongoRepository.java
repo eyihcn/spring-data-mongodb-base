@@ -56,13 +56,13 @@ public class ITestMyWishListMongoRepository extends AbstractIntegrationTest {
 
 		// 查询price少于500的 第二最大值的name
 		Criteria criteria = Criteria.where("price").lt(500);
-		pageable = PageRequest.of(0, 2, Direction.DESC, "price");
+		pageable = PageRequest.of(1, 1, Direction.DESC, "price");
 		MyWishList findOne = mongoMywishListRepository.findOne(criteria, pageable);
-		List<MyWishList> collect = createMyWishListList.stream().filter(e -> e.getPrice() >= 500).collect(Collectors.toList());
+		List<MyWishList> collect = createMyWishListList.stream().filter(e -> e.getPrice() < 500).collect(Collectors.toList());
 		Collections.sort(collect, (Comparator<MyWishList>) (MyWishList o1, MyWishList o2) -> {
 			return o1.getPrice() < o2.getPrice() ? 1 : -1;
 		});
-		MyWishList myWishList = collect.get(2);
+		MyWishList myWishList = collect.get(1);
 		Assert.assertEquals(findOne.getName(), myWishList.getName());
 	}
 
