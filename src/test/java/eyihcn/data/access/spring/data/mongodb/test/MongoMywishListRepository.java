@@ -6,7 +6,7 @@ import eyihcn.data.access.spring.data.mongodb.BaseMongoRepository;
 import eyihcn.data.example.model.MyWishList;
 
 @Repository
-public interface MongoMywishListRepository2 extends BaseMongoRepository<MyWishList, Integer> {
+public interface MongoMywishListRepository extends BaseMongoRepository<MyWishList, Integer> {
 
 	MyWishList findOneByName(String name);
 

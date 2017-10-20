@@ -2,6 +2,7 @@ package eyihcn.data.access.spring.data.mongodb;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.mongodb.repository.query.MongoEntityInformation;
 import org.springframework.data.mongodb.repository.support.SimpleMongoRepository;
 import org.springframework.data.repository.NoRepositoryBean;
@@ -25,6 +27,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.result.DeleteResult;
+import com.mongodb.client.result.UpdateResult;
 
 import eyihcn.base.entity.BaseEntity;
 
@@ -36,9 +39,9 @@ public class BaseMongoRepositoryImpl<T extends BaseEntity<PK>, PK extends Serial
 	private final MongoOperations mongoOperations;
 	private final MongoEntityInformation<T, PK> entityInformation;
 
-	private Class<T> entityClass; // 实体的运行是类
-	private Class<PK> pkClass; // 实体的运行是类
-	private String collectionName;// 创建的数据表的名称是类名的首字母小写
+	private final Class<T> entityClass; // 实体的运行是类
+	private final Class<PK> pkClass; // 实体的运行是类
+	private final String collectionName;// 创建的数据表的名称是类名的首字母小写
 
 	public BaseMongoRepositoryImpl(MongoEntityInformation<T, PK> metadata, MongoOperations mongoOperations) {
 		super(metadata, mongoOperations);
@@ -50,11 +53,14 @@ public class BaseMongoRepositoryImpl<T extends BaseEntity<PK>, PK extends Serial
 	}
 
 	@Override
-	public Page<T> QueryForPage(Criteria criteria, @Nullable Pageable pageable) {
+	public Page<T> QueryForPage(@Nullable Criteria criteria, @Nullable Pageable pageable) {
 
 		Assert.notNull(criteria, "Criteria must not be null!");
 
-		Query q = new Query(criteria);
+		Query q = new Query();
+		if (null != criteria) {
+			q.addCriteria(criteria);
+		}
 		if (null == pageable) {
 			pageable = Pageable.unpaged();
 		}
@@ -66,25 +72,34 @@ public class BaseMongoRepositoryImpl<T extends BaseEntity<PK>, PK extends Serial
 	}
 
 	@Override
-	public T findOne(Criteria criteria, @Nullable Pageable pageable) {
+	public T findOne(@Nullable Criteria criteria, @Nullable Pageable pageable) {
 
-		if (null == pageable) {
-			pageable = Pageable.unpaged();
+		Query q = new Query();
+		if (null != criteria) {
+			q.addCriteria(criteria);
 		}
-		return mongoOperations.findOne(new Query(criteria).with(pageable), entityClass, collectionName);
+		if (null != pageable) {
+			q.with(pageable);
+		}
+		return mongoOperations.findOne(q, entityClass, collectionName);
 	}
 
 	@Override
-	public T findOne(Criteria criteria, @Nullable Sort sort) {
-		if (null == sort) {
-			sort = Sort.unsorted();
+	public T findOne(@Nullable Criteria criteria, @Nullable Sort sort) {
+
+		Query q = new Query();
+		if (null != criteria) {
+			q.addCriteria(criteria);
 		}
-		return mongoOperations.findOne(new Query(criteria).with(sort), entityClass, collectionName);
+		if (null != sort) {
+			q.with(sort);
+		}
+		return mongoOperations.findOne(q, entityClass, collectionName);
 
 	}
 
 	@Override
-	public T findOne(Criteria criteria) {
+	public T findOne(@Nullable Criteria criteria) {
 
 		return findOne(criteria, (Sort) null);
 	}
@@ -139,23 +154,27 @@ public class BaseMongoRepositoryImpl<T extends BaseEntity<PK>, PK extends Serial
 	}
 
 	@Override
-	public boolean delete(Criteria criteria, @Nullable Pageable pageable) {
+	public DeleteResult delete(Criteria criteria, @Nullable Pageable pageable) {
 
 		if (null == pageable) {
 			pageable = Pageable.unpaged();
 		}
-		DeleteResult dr = mongoOperations.remove(new Query(criteria).with(pageable), entityClass, collectionName);
-		return dr.wasAcknowledged();
+		return mongoOperations.remove(new Query(criteria).with(pageable), entityClass, collectionName);
 	}
 
 	@Override
-	public boolean delete(Criteria criteria, @Nullable Sort sort) {
+	public DeleteResult delete(Criteria criteria, @Nullable Sort sort) {
 
 		if (null == sort) {
 			sort = Sort.unsorted();
 		}
-		DeleteResult dr = mongoOperations.remove(new Query(criteria).with(sort), entityClass, collectionName);
-		return dr.wasAcknowledged();
+		return mongoOperations.remove(new Query(criteria).with(sort), entityClass, collectionName);
+	}
+
+	@Override
+	public DeleteResult delete(Criteria criteria) {
+
+		return delete(criteria, (Sort) null);
 	}
 
 	/**
@@ -243,6 +262,33 @@ public class BaseMongoRepositoryImpl<T extends BaseEntity<PK>, PK extends Serial
 		}
 	}
 
+	@Override
+	public UpdateResult updateFirst(Criteria criteria, Update update) {
+
+		Assert.notNull(criteria, "The given criteria not be null!");
+		Assert.notNull(update, "The given update not be null!");
+
+		return mongoOperations.updateFirst(new Query(criteria), update, entityClass, collectionName);
+	}
+
+	@Override
+	public UpdateResult updateMulti(Criteria criteria, Update update) {
+
+		Assert.notNull(criteria, "The given criteria not be null!");
+		Assert.notNull(update, "The given update not be null!");
+
+		return mongoOperations.updateMulti(new Query(criteria), update, entityClass, collectionName);
+	}
+
+	@Override
+	public <ID extends PK> UpdateResult updateById(Collection<ID> ids, Update update) {
+
+		Assert.notNull(ids, "The given Iterable of ids not be null!");
+		Assert.notNull(update, "The given update not be null!");
+
+		return mongoOperations.updateMulti(new Query(Criteria.where(DEFAULT_ID_FIELD).in(ids)), update, entityClass, collectionName);
+	}
+
 	public String getNextId() {
 		return _getIdByOffset(getCollectionName(), 1);
 	}
@@ -261,12 +307,6 @@ public class BaseMongoRepositoryImpl<T extends BaseEntity<PK>, PK extends Serial
 			return offset + ""; // 若查询为匹配到数据，到返回null并未返回已经更新的数据，但是数据库已经执行了update
 		}
 		return findOneAndUpdate.get(sequence_field).toString();
-	}
-
-	@Override
-	public boolean delete(Criteria criteria) {
-
-		return delete(criteria, (Sort) null);
 	}
 
 	public MongoOperations getMongoOperations() {
